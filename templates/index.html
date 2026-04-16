@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF RAG Chatbot</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            width: 70%;
+            margin: auto;
+        }
+
+        .chat-box {
+            height: 450px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+        }
+
+        .user {
+            text-align: right;
+            margin: 10px;
+        }
+
+        .bot {
+            text-align: left;
+            margin: 10px;
+        }
+
+        .bubble {
+            display: inline-block;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 70%;
+            white-space: pre-wrap;
+        }
+
+        .user .bubble {
+            background: #007bff;
+            color: white;
+        }
+
+        .bot .bubble {
+            background: #e5e5ea;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>📄 Upload PDF</h2>
+<form method="POST" enctype="multipart/form-data">
+    <input type="file" name="pdf" required>
+    <button type="submit">Upload</button>
+</form>
+
+<hr>
+
+<div class="chat-box">
+    {% for msg in chat %}
+        <div class="{{ msg.role }}">
+            <div class="bubble">{{ msg.text }}</div>
+        </div>
+    {% endfor %}
+</div>
+
+<form method="POST">
+    <input type="text" name="query" placeholder="Ask question..." size="60" required>
+    <button type="submit">Send</button>
+</form>
+
+</body>
+</html>

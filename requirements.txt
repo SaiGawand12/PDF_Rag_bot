@@ -1,0 +1,10 @@
+flask
+flask-cors
+torch
+transformers
+sentence-transformers
+faiss-cpu
+pypdf
+langchain
+nltk
+nltk

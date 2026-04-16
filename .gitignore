@@ -1,0 +1,56 @@
+# ── Virtual Environment ──────────────────────────────────────────
+venv/
+env/
+.env
+.venv/
+
+# ── Python ───────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Models & Large Files (downloaded automatically on first run) ──
+# Hugging Face cache — do NOT commit model weights
+.cache/
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+
+# ── Vectorstore (rebuilt on upload, no need to commit) ───────────
+vectorstore/faiss.index
+vectorstore/chunks.pkl
+vectorstore/hashes.json
+
+# ── Uploaded PDFs (user data, not part of source code) ───────────
+uploads/*.pdf
+
+# ── Jupyter Notebook Checkpoints ─────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── OS Files ─────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE / Editor ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Logs ─────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Environment Variables ─────────────────────────────────────────
+.env
+.env.local
+.env.production
