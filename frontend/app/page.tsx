@@ -6,18 +6,19 @@ import ChatMessage from "@/components/ChatMessage";
 import TypingIndicator from "@/components/TypingIndicator";
 import ChatInput from "@/components/ChatInput";
 import EmptyState from "@/components/EmptyState";
-import { Message, UploadedFile } from "@/types";
+import { Message, UploadedFile, ChatSession } from "@/types";
 
 const API = "http://localhost:5000";
 
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [prefill, setPrefill] = useState<string | undefined>();
+  const [messages, setMessages]     = useState<Message[]>([]);
+  const [files, setFiles]           = useState<UploadedFile[]>([]);
+  const [loading, setLoading]       = useState(false);
+  const [uploading, setUploading]   = useState(false);
+  const [prefill, setPrefill]       = useState<string | undefined>();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile]     = useState(false);
+  const [sessionId, setSessionId]   = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,11 +35,51 @@ export default function Home() {
   const addMsg = (role: "user" | "bot", text: string) =>
     setMessages(p => [...p, { id: crypto.randomUUID(), role, text, timestamp: new Date() }]);
 
+  // ── Create a new session ──────────────────────────────────────────
+  const createSession = async (): Promise<number> => {
+    const res = await fetch(`${API}/api/sessions`, { method: "POST" });
+    const data = await res.json();
+    setSessionId(data.id);
+    return data.id;
+  };
+
+  // ── Load an existing session ──────────────────────────────────────
+  const handleSelectSession = async (s: ChatSession) => {
+    setSessionId(s.id);
+    const res = await fetch(`${API}/api/sessions/${s.id}`);
+    const data = await res.json();
+
+    setMessages(data.messages.map((m: { id: number; role: "user" | "bot"; text: string; created_at: string }) => ({
+      id:        String(m.id),
+      role:      m.role,
+      text:      m.text,
+      timestamp: new Date(m.created_at),
+    })));
+
+    setFiles(s.files.map(f => ({
+      id:         f.id,
+      name:       f.filename,
+      size:       f.size,
+      uploadedAt: new Date(f.created_at),
+    })));
+  };
+
+  // ── New chat ──────────────────────────────────────────────────────
+  const handleNewChat = () => {
+    setSessionId(null);
+    setMessages([]);
+    setFiles([]);
+  };
+
+  // ── Upload ────────────────────────────────────────────────────────
   const handleUpload = async (file: File) => {
     setUploading(true);
     try {
+      const sid = sessionId ?? await createSession();
       const form = new FormData();
       form.append("pdf", file);
+      form.append("session_id", String(sid));
+
       const res = await fetch(`${API}/api/upload`, { method: "POST", body: form });
       if (!res.ok) throw new Error();
       const { job_id, filename } = await res.json();
@@ -64,15 +105,17 @@ export default function Home() {
     }
   };
 
+  // ── Send message ──────────────────────────────────────────────────
   const handleSend = async (text: string) => {
     addMsg("user", text);
     setLoading(true);
     setPrefill(undefined);
     try {
+      const sid = sessionId ?? await createSession();
       const res = await fetch(`${API}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: text }),
+        body: JSON.stringify({ query: text, session_id: sid }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -84,13 +127,14 @@ export default function Home() {
     }
   };
 
+  // ── Delete file ───────────────────────────────────────────────────
   const handleDelete = async (filename: string) => {
     setFiles(p => p.filter(f => f.name !== filename));
     try {
       await fetch(`${API}/api/delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename }),
+        body: JSON.stringify({ filename, session_id: sessionId }),
       });
     } catch {}
   };
@@ -100,10 +144,13 @@ export default function Home() {
   return (
     <div style={{ display: "flex", height: "100dvh", overflow: "hidden" }}>
       <Sidebar
+        sessionId={sessionId}
         files={files}
         onUpload={handleUpload}
         onDelete={handleDelete}
         onClearChat={() => setMessages([])}
+        onNewChat={handleNewChat}
+        onSelectSession={handleSelectSession}
         uploading={uploading}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -112,15 +159,8 @@ export default function Home() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg)", minWidth: 0 }}>
 
         {/* Topbar */}
-        <div style={{
-          height: isMobile ? 52 : 50,
-          padding: isMobile ? "0 16px" : "0 24px",
-          borderBottom: "1px solid var(--line)",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          flexShrink: 0,
-        }}>
+        <div style={{ height: isMobile ? 52 : 50, padding: isMobile ? "0 16px" : "0 24px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            {/* Mobile menu button */}
             {isMobile && (
               <button onClick={() => setSidebarOpen(true)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text2)", padding: "4px", display: "flex", alignItems: "center", flexShrink: 0 }}>
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -147,7 +187,6 @@ export default function Home() {
               <span style={{ fontSize: 13, color: "var(--text3)" }}>No document loaded</span>
             )}
           </div>
-
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)" }} />
             <span style={{ fontSize: 11, color: "var(--text3)" }}>{isMobile ? "Local" : "Local · Private"}</span>

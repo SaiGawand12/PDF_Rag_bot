@@ -5,8 +5,13 @@ import { Message } from "@/types";
 interface Props { message: Message; index: number; isMobile?: boolean; }
 
 function renderContent(text: string) {
-  const parts = text.split(/(\[Page \d+\])/g);
-  return parts.map((part, i) => {
+  // Split off the source line at the end
+  const sourceMatch = text.match(/\n\n(📄 .+)$/);
+  const mainText = sourceMatch ? text.slice(0, sourceMatch.index) : text;
+  const sourceLine = sourceMatch ? sourceMatch[1] : null;
+
+  const parts = mainText.split(/(\[Page \d+\])/g);
+  const rendered = parts.map((part, i) => {
     const m = part.match(/\[Page (\d+)\]/);
     if (m) {
       return (
@@ -21,6 +26,24 @@ function renderContent(text: string) {
     }
     return <span key={i}>{part}</span>;
   });
+
+  return (
+    <>
+      {rendered}
+      {sourceLine && (
+        <div style={{
+          marginTop: 10,
+          paddingTop: 8,
+          borderTop: "1px solid var(--line)",
+          fontSize: 11,
+          color: "var(--text3)",
+          fontStyle: "italic",
+        }}>
+          {sourceLine}
+        </div>
+      )}
+    </>
+  );
 }
 
 export default function ChatMessage({ message, index, isMobile }: Props) {

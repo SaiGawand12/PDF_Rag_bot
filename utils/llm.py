@@ -40,8 +40,7 @@ STRICT RULES:
 1. Answer ONLY from context
 2. If unsure → say "Not found in document"
 3. Use bullet points
-4. Each bullet MUST contain page number
-5. Do NOT change technical terms
+4. Do NOT change technical terms
 
 Context:
 {context}
@@ -61,7 +60,19 @@ Answer:
         repetition_penalty=1.2
     )
 
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+    answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    # Always append source pages — guaranteed, regardless of model output
+    pages = sorted(set(doc["page"] for doc in retrieved_docs))
+    source = retrieved_docs[0].get("source", "")
+    page_str = ", ".join(f"Page {p}" for p in pages)
+
+    if source:
+        answer += f"\n\n📄 Source: {source} — {page_str}"
+    else:
+        answer += f"\n\n📄 Found on: {page_str}"
+
+    return answer
 
 
 def summarize_topic(topic, retrieved_docs):
